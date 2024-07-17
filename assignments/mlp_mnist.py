@@ -5,7 +5,6 @@ import matplotlib.pyplot as plt
 
 # 1. 계층
 class Layer_Dense:
-
     # 레이어 초기화
     def __init__(self, n_inputs, n_neurons,
                  weight_regularizer_l1=0, weight_regularizer_l2=0,
@@ -55,7 +54,6 @@ class Layer_Dense:
 
 # 2. 드롭아웃
 class Layer_Dropout:
-
     # 드롭아웃 설정
     def __init__(self, rate):
         # = 전체(1)에서 드롭시킬비율(rate)을 뺀 것 
@@ -91,7 +89,6 @@ class Layer_Input:
 # 4. 활성화 함수
 # 4.1. ReLU 함수
 class Activation_ReLU:
-
     # 순방향
     def forward(self, inputs, training):
         # 계층 입력값
@@ -109,7 +106,6 @@ class Activation_ReLU:
 
 # 4.2. Softmax 함수
 class Activation_Softmax:
-
     # 순방향
     def forward(self, inputs, training):
         # 계층 입력값
@@ -156,7 +152,6 @@ class Loss:
     
 # 5.2. Categorical Cross-Entropy Loss (다중 클래스 분류 문제에서 사용하는 손실 함수)
 class Loss_CategoricalCrossentropy(Loss):
-
     def forward(self, y_pred, y_true):
         samples = len(y_pred)
         y_pred_clipped = np.clip(y_pred, 1e-7, 1 - 1e-7)
@@ -181,7 +176,6 @@ class Loss_CategoricalCrossentropy(Loss):
 
 # 5.3. Categorical Cross-Entropy +  Softmax Activation (by Chain Rule) 
 class Activation_Softmax_Loss_CategoricalCrossentropy():
-
     def __init__(self):
         self.activation = Activation_Softmax()
         self.loss = Loss_CategoricalCrossentropy()
@@ -205,7 +199,6 @@ class Activation_Softmax_Loss_CategoricalCrossentropy():
 # 6. 최적화
 # Adam(Adaptive Momentum) Optimizer (: RMSProp Optimizer + momentum from SGD Optimizer)
 class Optimizer_Adam:
-
     def __init__(self, learning_rate=0.001, decay=0., epsilon=1e-7, beta_1=0.9, beta_2=0.999):
         self.learning_rate = learning_rate
         self.current_learning_rate = learning_rate
@@ -218,9 +211,8 @@ class Optimizer_Adam:
     def pre_update_params(self):
         if self.decay:
             self.current_learning_rate = self.learning_rate * (1. / (1. + self.decay * self.iterations))
-
+            
     def update_params(self, layer):
-
         if not hasattr(layer, 'weight_cache'):
             layer.weight_momentums = np.zeros_like(layer.weights)
             layer.weight_cache = np.zeros_like(layer.weights)
@@ -238,7 +230,7 @@ class Optimizer_Adam:
         
         weight_cache_corrected = layer.weight_cache / (1 - self.beta_2 ** (self.iterations + 1))
         bias_cache_corrected = layer.bias_cache / (1 - self.beta_2 ** (self.iterations + 1))
-
+        
         layer.weights += -self.current_learning_rate * weight_momentums_corrected / (np.sqrt(weight_cache_corrected) + self.epsilon)
         layer.biases += -self.current_learning_rate * bias_momentums_corrected / (np.sqrt(bias_cache_corrected) + self.epsilon)
 
@@ -249,16 +241,12 @@ class Optimizer_Adam:
 # 7.1 정확도 연산
 class Accuracy:
     def calculate(self, predictions, y):
-
         comparisons = self.compare(predictions, y)
-
         accuracy = np.mean(comparisons)
-
         return accuracy
     
 # 7.2. 분류 모델에서 정확도 연산
 class Accuracy_Categorical(Accuracy):
-
     def __init__(self, *, binary=False):
         self.binary = binary
 
@@ -272,7 +260,6 @@ class Accuracy_Categorical(Accuracy):
  
 # 8. 모델
 class Model:
-
     def __init__(self):
         self.layers = []
         self.softmax_classifier_output = None
@@ -286,15 +273,11 @@ class Model:
         self.accuracy = accuracy
 
     def finalize(self):
-
         self.input_layer = Layer_Input()
-
         layer_count = len(self.layers)
-
         self.trainable_layers = []
 
         for i in range(layer_count):
-
             if i == 0:
                 self.layers[i].prev = self.input_layer
                 self.layers[i].next = self.layers[i+1]
@@ -312,15 +295,11 @@ class Model:
                 self.trainable_layers.append(self.layers[i])
 
         self.loss.remember_trainable_layers(self.trainable_layers)
-
         if isinstance(self.layers[-1], Activation_Softmax) and isinstance(self.loss, Loss_CategoricalCrossentropy):
-
             self.softmax_classifier_output = Activation_Softmax_Loss_CategoricalCrossentropy()
 
     def train(self, X, y, *, epochs=100, print_every=10, test_data=None):
-
         self.accuracy.init(y)
-        
         data_losses = []
         regularization_losses = []
         losses = []
@@ -344,7 +323,6 @@ class Model:
             predictions = self.output_layer_activation.predictions(output)
             accuracy = self.accuracy.calculate(predictions, y)
             accuracies.append(accuracy)
-            
             learning_rates.append(self.optimizer.current_learning_rate)
 
             # 총 계층 역방향 실행
@@ -388,13 +366,9 @@ class Model:
         
         # 테스트 루프
         if test_data is not None:
-
             X_test, y_test = test_data
-
             output = self.forward(X_test, training=False)
-
             loss = self.loss.calculate(output, y_test)
-
             predictions = self.output_layer_activation.predictions(output)
             accuracy = self.accuracy.calculate(predictions, y_test)
 
@@ -404,25 +378,17 @@ class Model:
                   f'loss: {loss:.3f}')
 
     def forward(self, X, training):
-
         self.input_layer.forward(X, training)
-
         for layer in self.layers:
             layer.forward(layer.prev.output, training)
-
         return layer.output
 
     def backward(self, output, y):
-
         if self.softmax_classifier_output is not None:
-
             self.softmax_classifier_output.backward(output, y)
-
             self.layers[-1].dinputs = self.softmax_classifier_output.dinputs
-
             for layer in reversed(self.layers[:-1]):
                 layer.backward(layer.next.dinputs)
-
             return
 
         self.loss.backward(output, y)
